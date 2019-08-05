@@ -130,7 +130,6 @@ public class DeviceListActivity extends AppCompatActivity
 
         pairedDevices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
 
-        BluetoothClass bluetoothClass;
         if (pairedDevices.size() > 0) {
             // There are paired devices. Get the name and address of each paired device.
             for (BluetoothDevice device : pairedDevices) {
