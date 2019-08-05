@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">BTmessenger</string>
+    <string name="Search_BT">Select Bluetooth Server</string>
+    <string name="available_devices">Devices</string>
+    <string name="join_BT">Create Server</string>
+    <string name="Accept_Thread">Accept_Thread</string>
+    <string name="sender_activty">sender_activity</string>
+
+</resources>

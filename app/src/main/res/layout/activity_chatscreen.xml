@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/relLayout1"
+        android:layout_alignParentTop="true"
+        android:layout_marginBottom="5dp">
+
+        <!-- Toolbar to close the connection -->
+        <include layout="@layout/layout_chatscreen_toolbar"/>
+
+    </RelativeLayout>
+
+
+
+        <!--Chat message display area with Recycler view-->
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/chat_msg_container"
+            android:orientation="vertical"
+             android:layout_below="@id/relLayout1"
+            android:layout_above="@id/relLayout3"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior"
+            >
+
+
+        </androidx.recyclerview.widget.RecyclerView>
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/relLayout3"
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="5dp"
+        >
+        <!--chat inputs and send button -->
+
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:id="@+id/etChatInput"
+            android:hint="Enter your message here..."
+            android:background="@drawable/white_background"
+
+            />
+
+        <ImageButton
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:id="@+id/sendBtn"
+            android:src="@drawable/ic_send_black_24dp"
+            android:layout_alignRight="@id/etChatInput"
+            android:background="@drawable/white_background"
+            />
+
+    </RelativeLayout>
+
+</RelativeLayout>

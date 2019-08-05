@@ -1,0 +1,38 @@
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/white">
+
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/ic_backarrow"
+                android:background="@color/white"
+                android:id="@+id/backArrow"
+                />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/black"
+                android:text="@string/available_devices"
+                android:id="@+id/tvAvailableDevices"
+                android:layout_marginLeft="10dp"
+                />
+
+
+        </androidx.appcompat.widget.Toolbar>
+
+
+    </RelativeLayout>
+
+
+</merge>
