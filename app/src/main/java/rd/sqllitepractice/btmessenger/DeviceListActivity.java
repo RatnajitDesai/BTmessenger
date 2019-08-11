@@ -26,9 +26,7 @@ import java.util.Set;
 
 import rd.sqllitepractice.btmessenger.Adapter.DeviceRecyclerAdapter;
 import rd.sqllitepractice.btmessenger.BTfuctions.BTChatService;
-import rd.sqllitepractice.btmessenger.ChatActivity;
 import rd.sqllitepractice.btmessenger.Models.BTDevice;
-import rd.sqllitepractice.btmessenger.R;
 import rd.sqllitepractice.btmessenger.Utility.BTChatServiceSingleton;
 import rd.sqllitepractice.btmessenger.Utility.Constants;
 
@@ -133,9 +131,13 @@ public class DeviceListActivity extends AppCompatActivity
         if (pairedDevices.size() > 0) {
             // There are paired devices. Get the name and address of each paired device.
             for (BluetoothDevice device : pairedDevices) {
-                Log.d(TAG, "getPairedDevices: Found : "+device.getName() +" with address "+device.getAddress());
-                mBtDevice = new BTDevice(device, true);
-                allAvailableDevices.add(mBtDevice);
+                BluetoothClass bluetoothClass = device.getBluetoothClass();
+                int deviceClass = bluetoothClass.getDeviceClass();
+                if (deviceClass == BluetoothClass.Device.PHONE_SMART) {
+                    Log.d(TAG, "getPairedDevices: Found : " + device.getName() + " with address " + device.getAddress());
+                    mBtDevice = new BTDevice(device, true);
+                    allAvailableDevices.add(mBtDevice);
+                }
             }
         }
     }
@@ -208,7 +210,7 @@ public class DeviceListActivity extends AppCompatActivity
 
     private void startMessaging(BluetoothDevice device) {
 
-            mBtChatService = BTChatServiceSingleton.getInstance(handler);
+        mBtChatService = BTChatServiceSingleton.getInstance(mContext, handler);
             mBtChatService.startConnecting(device);
             Toast.makeText(mContext, "Connecting...", Toast.LENGTH_SHORT).show();
 

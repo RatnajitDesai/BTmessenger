@@ -19,11 +19,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-import rd.sqllitepractice.btmessenger.ChatActivity;
 import rd.sqllitepractice.btmessenger.Utility.Constants;
-import rd.sqllitepractice.btmessenger.Utility.Utility;
 
-public class BTChatService{
+public class BTChatService {
 
     private static final String TAG = "BTChatService";
 
@@ -46,16 +44,17 @@ public class BTChatService{
 
 
     // Constants that indicate the current connection state
-    public static final int STATE_NONE = 0;       // we're doing nothing
-    public static final int STATE_LISTEN = 1;     // now listening for incoming connections
-    public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
-    public static final int STATE_CONNECTED = 3;  // now connected to a remote device
+    private static final int STATE_NONE = 0;       // we're doing nothing
+    private static final int STATE_LISTEN = 1;     // now listening for incoming connections
+    private static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
+    private static final int STATE_CONNECTED = 3;  // now connected to a remote device
     private ConnectedThread mConnectedThread;
 
-    public BTChatService( Handler mHandler) {
+    public BTChatService(Context context, Handler mHandler) {
         this.mHandler = mHandler;
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         mState = STATE_NONE;
+        mContext = context.getApplicationContext();
     }
 
 
@@ -82,7 +81,7 @@ public class BTChatService{
     }
 
 
-    public void sendMessage(String msg, String resID){
+    private void sendMessage(String msg, String resID) {
         Log.d(TAG, "sendMessage: Message "+msg);
         Intent intent = new Intent(Constants.MESSAGE_RECEIVER);
         intent.putExtra("Message", msg);
@@ -91,25 +90,66 @@ public class BTChatService{
         Log.d(TAG, "sendMessage: INTENT BROADCAST WITH MESSAGE SUCCESSFUL.");
     }
 
-    public int getState(){
-        return mState;
-    }
-
-    public void startConnecting(BluetoothDevice device) {
+    private void startConnecting(BluetoothDevice device) {
 
         mConnectThread = new ConnectThread(device);
         mConnectThread.start();
     }
 
-    public void connect() {
+    /**
+     * Write to the ConnectedThread in an unsynchronized manner
+     *
+     * @param out The bytes to write
+     * @see ConnectedThread#write(byte[])
+     */
+    public void write(byte[] out) {
+        // Create temporary object
+        ConnectedThread r;
+        // Synchronize a copy of the ConnectedThread
+        synchronized (this) {
+            if (mState != STATE_CONNECTED) return;
+            r = mConnectedThread;
+        }
+        // Perform the write unsynchronized
+        r.write(out);
+        Log.d(TAG, "write: MESSAGE EXTERNAL :" + out);
+    }
+
+    public synchronized void connectedThread() {
+
+        Log.d(TAG, "connectedThread: Socket connection established :" + mBluetoothSocket.isConnected());
+        Toast.makeText(mContext,
+                "Connected to device :" + mBluetoothSocket.getRemoteDevice().getName(),
+                Toast.LENGTH_SHORT).show();
+        mConnectedThread = new ConnectedThread(mBluetoothSocket);
+        mConnectedThread.start();
+
+    }
+
+    private void connectionLost(BluetoothSocket socket) {
+        mState = STATE_NONE;
+        Message msg = mHandler.obtainMessage(Constants.MESSAGE_CONNECTION_LOST);
+        Bundle bundle = new Bundle();
+        bundle.putString(Constants.TOAST_MESSAGE, "Connection closed");
+        msg.setData(bundle);
+        mHandler.sendMessage(msg);
+    }
 
 
+    private void connectionEstablished(BluetoothSocket socket, BluetoothDevice device) {
+        mBluetoothSocket = socket;
+        Message msg = mHandler.obtainMessage(Constants.MESSAGE_CONNECTED_DEVICE);
+        Bundle bundle = new Bundle();
+        bundle.putString(Constants.DEVICE_NAME, device.getName());
+        msg.setData(bundle);
+        mHandler.sendMessage(msg);
+        mState = STATE_CONNECTED;
     }
 
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
 
-        public AcceptThread() {
+        private AcceptThread() {
             // Use a temporary object that is later assigned to mmServerSocket
             // because mmServerSocket is final.
             BluetoothServerSocket tmp = null;
@@ -156,7 +196,7 @@ public class BTChatService{
         }
 
         // Closes the connect socket and causes the thread to finish.
-        public void cancel() {
+        private void cancel() {
             try {
                 mmServerSocket.close();
             } catch (IOException e) {
@@ -165,44 +205,11 @@ public class BTChatService{
         }
     }
 
-    public synchronized void connectedThread() {
-
-        Log.d(TAG, "connectedThread: Socket connection established :"+mBluetoothSocket.isConnected());
-        mContext = ChatActivity.returnContext();
-        Toast.makeText(mContext,
-                "Connected to device :"+mBluetoothSocket.getRemoteDevice().getName(),
-                Toast.LENGTH_SHORT).show();
-        mConnectedThread = new ConnectedThread(mBluetoothSocket);
-        mConnectedThread.start();
-
-    }
-
-    private void connectionLost(BluetoothSocket socket) {
-        mState = STATE_NONE;
-        Message msg = mHandler.obtainMessage(Constants.MESSAGE_CONNECTION_LOST);
-        Bundle bundle = new Bundle();
-        bundle.putString(Constants.TOAST_MESSAGE, "Connection closed");
-        msg.setData(bundle);
-        mHandler.sendMessage(msg);
-    }
-
-
-    private void connectionEstablished(BluetoothSocket socket, BluetoothDevice device) {
-        mBluetoothSocket = socket;
-        Message msg = mHandler.obtainMessage(Constants.MESSAGE_CONNECTED_DEVICE);
-        Bundle bundle = new Bundle();
-        bundle.putString(Constants.DEVICE_NAME ,device.getName());
-        msg.setData(bundle);
-        mHandler.sendMessage(msg);
-        mState = STATE_CONNECTED;
-    }
-
-
     private class ConnectThread extends Thread {
         private final BluetoothSocket mmSocket;
         private final BluetoothDevice mmDevice;
 
-        public ConnectThread(BluetoothDevice device) {
+        private ConnectThread(BluetoothDevice device) {
             // Use a temporary object that is later assigned to mmSocket
             // because mmSocket is final.
             BluetoothSocket tmp = null;
@@ -240,18 +247,17 @@ public class BTChatService{
             // The connection attempt succeeded. Perform work associated with
             // the connection in a separate thread.
             connectionEstablished(mmSocket, mmDevice);
-            switch (mState){
-                case STATE_CONNECTED:
-                {
+            if (mState == STATE_CONNECTED) {
                     mBluetoothSocket = mmSocket;
                   //  connectedThread();
-                }
+            } else {
+                Log.d(TAG, "Connect Thread: run: not connected ");
             }
 
         }
 
         // Closes the client socket and causes the thread to finish.
-        public void cancel() {
+        private void cancel() {
             try {
                 mmSocket.close();
             } catch (IOException e) {
@@ -260,9 +266,6 @@ public class BTChatService{
         }
     }
 
-
-
-
         private class ConnectedThread extends Thread {
             private final BluetoothSocket mmSocket;
             private final InputStream mmInStream;
@@ -270,7 +273,7 @@ public class BTChatService{
             private byte[] mmBuffer; // mmBuffer store for the stream
 
 
-            public ConnectedThread(BluetoothSocket socket) {
+            private ConnectedThread(BluetoothSocket socket) {
                 mmSocket = socket;
                 InputStream tmpIn = null;
                 OutputStream tmpOut = null;
@@ -322,7 +325,7 @@ public class BTChatService{
              *
              * @param buffer The bytes to write
              */
-            public void write(byte[] buffer) {
+            private void write(byte[] buffer) {
                 try {
                     mmOutStream.write(buffer);
                     String WriteMsg = new String(buffer);
@@ -338,7 +341,7 @@ public class BTChatService{
             }
 
             // Call this method from the main activity to shut down the connection.
-            public void cancel() {
+            private void cancel() {
                 try {
                     Toast.makeText(mContext,
                             "Connection closed by : "+mmSocket.getRemoteDevice().getName(),
@@ -349,25 +352,5 @@ public class BTChatService{
                 }
             }
         }
-
-
-    /**
-     * Write to the ConnectedThread in an unsynchronized manner
-     *
-     * @param out The bytes to write
-     * @see ConnectedThread#write(byte[])
-     */
-    public void write(byte[] out) {
-        // Create temporary object
-        ConnectedThread r;
-        // Synchronize a copy of the ConnectedThread
-        synchronized (this) {
-            if (mState != STATE_CONNECTED) return;
-            r = mConnectedThread;
-        }
-        // Perform the write unsynchronized
-        r.write(out);
-        Log.d(TAG, "write: MESSAGE EXTERNAL :"+out);
-    }
 
 }

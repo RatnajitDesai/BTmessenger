@@ -13,7 +13,6 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.IntentCompat;
 
 import rd.sqllitepractice.btmessenger.BTfuctions.BTChatService;
 import rd.sqllitepractice.btmessenger.Utility.BTChatServiceSingleton;
@@ -70,7 +69,7 @@ public class BluetoothConnectionActivity extends AppCompatActivity {
 
     private void startAccepting() {
 
-        mBtChatService = BTChatServiceSingleton.getInstance(handler);
+        mBtChatService = BTChatServiceSingleton.getInstance(mContext, handler);
         mBtChatService.startAccepting();
 
     }

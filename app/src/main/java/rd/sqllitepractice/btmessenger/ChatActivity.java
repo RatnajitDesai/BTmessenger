@@ -42,7 +42,7 @@ public class ChatActivity extends AppCompatActivity {
     private int mState;
     private int mNewState;
     private BTChatService mBtChatService;
-    private static Context mContext;
+    private Context mContext;
     private MessagesRecyclerAdapter mMessagesRecyclerAdapter;
     private ArrayList<rd.sqllitepractice.btmessenger.Models.Message> message_list = new ArrayList<>();
     private BluetoothSocket mBluetoothSocket;
@@ -75,7 +75,7 @@ public class ChatActivity extends AppCompatActivity {
         mContext = getApplicationContext();
         mRecyclerView = findViewById(R.id.chat_msg_container);
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mOutStringBuffer = new StringBuffer("");
+        mOutStringBuffer = new StringBuffer();
         mContext = getApplicationContext();
 
         init();
@@ -130,9 +130,6 @@ public class ChatActivity extends AppCompatActivity {
     };
 
 
-    public static Context returnContext(){
-        return mContext;
-    }
     private void initializeRecyclerView() {
 
         LinearLayoutManager manager = new LinearLayoutManager(this);
@@ -165,7 +162,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void startMessaging() {
 
-        mBtChatService = BTChatServiceSingleton.getInstance(handler);
+        mBtChatService = BTChatServiceSingleton.getInstance(mContext, handler);
         mBtChatService.connectedThread();
 
     }
