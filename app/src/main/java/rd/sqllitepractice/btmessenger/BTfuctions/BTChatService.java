@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -20,6 +21,7 @@ import java.io.OutputStream;
 import java.util.UUID;
 
 import rd.sqllitepractice.btmessenger.Utility.Constants;
+import rd.sqllitepractice.btmessenger.Utility.Utility;
 
 public class BTChatService {
 
@@ -32,6 +34,7 @@ public class BTChatService {
     // Unique UUID for this application
     private static final UUID MY_UUID =
             UUID.fromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
+    private static final String MESSAGE_TYPE_STRING = "worldofryuk";
 
     //vars
     private Context mContext;
@@ -40,6 +43,7 @@ public class BTChatService {
     private BluetoothAdapter mBluetoothAdapter;
     private AcceptThread mAcceptThread;
     private ConnectThread mConnectThread;
+    private ConnectedThread mConnectedThread;
     private BluetoothSocket mBluetoothSocket;
 
 
@@ -48,7 +52,7 @@ public class BTChatService {
     private static final int STATE_LISTEN = 1;     // now listening for incoming connections
     private static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     private static final int STATE_CONNECTED = 3;  // now connected to a remote device
-    private ConnectedThread mConnectedThread;
+
 
     public BTChatService(Context context, Handler mHandler) {
         this.mHandler = mHandler;
@@ -90,7 +94,22 @@ public class BTChatService {
         Log.d(TAG, "sendMessage: INTENT BROADCAST WITH MESSAGE SUCCESSFUL.");
     }
 
-    private void startConnecting(BluetoothDevice device) {
+
+    private void sendImage(String imageBitmap, String resID) {
+        Log.d(TAG, "sendImage: Image " + imageBitmap);
+        Intent intent = new Intent(Constants.MESSAGE_RECEIVER);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
+                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        Bitmap bitmap = Utility.StringToBitMap(imageBitmap);
+        intent.putExtra("Image_Uri", bitmap);
+        intent.putExtra(Constants.MESSAGE_TYPE, resID);
+        LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+        Log.d(TAG, "sendMessage: INTENT BROADCAST WITH MESSAGE SUCCESSFUL.");
+    }
+
+
+    public void startConnecting(BluetoothDevice device) {
 
         mConnectThread = new ConnectThread(device);
         mConnectThread.start();
@@ -100,20 +119,21 @@ public class BTChatService {
      * Write to the ConnectedThread in an unsynchronized manner
      *
      * @param out The bytes to write
-     * @see ConnectedThread#write(byte[])
+     * @see ConnectedThread#write(byte[], boolean)
      */
-    public void write(byte[] out) {
+    public void write(byte[] out, boolean isImage) {
         // Create temporary object
         ConnectedThread r;
-        // Synchronize a copy of the ConnectedThread
+        // Synchronize a copy of the ConnectedThread and ImageConnectedThread
         synchronized (this) {
             if (mState != STATE_CONNECTED) return;
             r = mConnectedThread;
         }
         // Perform the write unsynchronized
-        r.write(out);
+        r.write(out, isImage);
         Log.d(TAG, "write: MESSAGE EXTERNAL :" + out);
     }
+
 
     public synchronized void connectedThread() {
 
@@ -123,7 +143,6 @@ public class BTChatService {
                 Toast.LENGTH_SHORT).show();
         mConnectedThread = new ConnectedThread(mBluetoothSocket);
         mConnectedThread.start();
-
     }
 
     private void connectionLost(BluetoothSocket socket) {
@@ -134,7 +153,6 @@ public class BTChatService {
         msg.setData(bundle);
         mHandler.sendMessage(msg);
     }
-
 
     private void connectionEstablished(BluetoothSocket socket, BluetoothDevice device) {
         mBluetoothSocket = socket;
@@ -226,6 +244,7 @@ public class BTChatService {
             mState = STATE_CONNECTING;
         }
 
+
         public void run() {
             // Cancel discovery because it otherwise slows down the connection.
             mBluetoothAdapter.cancelDiscovery();
@@ -296,26 +315,59 @@ public class BTChatService {
                 mmOutStream = tmpOut;
             }
 
+
             public void run() {
                 mmBuffer = new byte[1024];
                 int numBytes; // bytes returned from read()
+
+                byte[] bytes;
 
 
                 // Keep listening to the InputStream until an exception occurs.
                 while (true) {
                     try {
+
+                        String readmsg = "";
+                        StringBuilder builder = new StringBuilder();
+                        int len = 0;
+
+                        // we need to know how may bytes were read to write them to the byteBuffer
+
+                        try {
+                            while ((len = mmInStream.read(mmBuffer, 0, mmBuffer.length)) != -1) {
+                                readmsg = new String(mmBuffer, 0, len);
+                                builder.append(readmsg);
+                                Log.d(TAG, "readBytes: Reading bytes from input stream...");
+                                if (builder.substring(builder.length() - MESSAGE_TYPE_STRING.length(), builder.length()).
+                                        equals(MESSAGE_TYPE_STRING)) {
+                                    Log.d(TAG, "run: READING COMPLETED");
+                                    break;
+                                }
+                            }
+
+                        } catch (Exception e) {
+                            Log.e(TAG, "run: READING EXCEPTION " + e.getMessage());
+                        }
+                        readmsg = new String(builder);
+
+                        if (readmsg.contains(MESSAGE_TYPE_STRING)) {
+                            Log.d(TAG, "run: Readmsg type : Image");
+
+                            readmsg = readmsg.replace(MESSAGE_TYPE_STRING, "");
+                            sendImage(readmsg, Constants.READ_MESSAGE);
+                        }
                         // Read from the InputStream.
-                        numBytes = mmInStream.read(mmBuffer);
-                        String Readmsg = new String(mmBuffer, 0, numBytes);
+                        else {
+                            Log.d(TAG, "run: Readmsg type : Text");
+                            sendMessage(readmsg, Constants.READ_MESSAGE);
+                        }
 
+                    } catch (Exception e) {
 
-                        Log.d(TAG, "READ: MESSAGE :::::::::"+Readmsg);
-                        sendMessage(Readmsg, Constants.READ_MESSAGE);
-
-                    } catch (IOException e) {
                         Log.d(TAG, "Input stream was disconnected", e);
                         connectionLost(mmSocket);
                         break;
+
                     }
                 }
             }
@@ -324,19 +376,30 @@ public class BTChatService {
              * Write to the connected OutStream.
              *
              * @param buffer The bytes to write
+             * @param isImage Incoming bytes form image or plain text
              */
-            private void write(byte[] buffer) {
+            private void write(byte[] buffer, boolean isImage) {
                 try {
-                    mmOutStream.write(buffer);
-                    String WriteMsg = new String(buffer);
 
-                    Log.d(TAG, "write: MESSAGE :::::::::"+WriteMsg);
-                    // Share the sent message back to the UI Activity
-                    mHandler.obtainMessage(Constants.MESSAGE_WRITE, -1, -1, WriteMsg)
-                            .sendToTarget();
-                    sendMessage(WriteMsg, Constants.WRITE_MESSAGE);
+                    if (isImage) {
+                        String WriteMsg = new String(buffer);
+                        sendImage(WriteMsg, Constants.WRITE_MESSAGE);
+                        String s = MESSAGE_TYPE_STRING + WriteMsg + MESSAGE_TYPE_STRING;
+                        mmOutStream.write(s.getBytes());
+                    } else {
+                        String WriteMsg = new String(buffer);
+                        Log.d(TAG, "write: MESSAGE :::::::::" + WriteMsg);
+
+                        // Share the sent message back to the UI Activity
+                        sendMessage(WriteMsg, Constants.WRITE_MESSAGE);
+                        mmOutStream.write(buffer);
+
+                    }
+
                 } catch (IOException e) {
+
                     Log.e(TAG, "Exception during write", e);
+
                 }
             }
 
@@ -352,5 +415,6 @@ public class BTChatService {
                 }
             }
         }
+
 
 }

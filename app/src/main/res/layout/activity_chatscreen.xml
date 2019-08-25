@@ -5,17 +5,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <RelativeLayout
+    <androidx.appcompat.widget.Toolbar
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/relLayout1"
+        android:id="@+id/toolbar"
         android:layout_alignParentTop="true"
         android:layout_marginBottom="5dp">
 
         <!-- Toolbar to close the connection -->
         <include layout="@layout/layout_chatscreen_toolbar"/>
 
-    </RelativeLayout>
+    </androidx.appcompat.widget.Toolbar>
 
 
 
@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:id="@+id/chat_msg_container"
             android:orientation="vertical"
-             android:layout_below="@id/relLayout1"
+            android:layout_below="@id/toolbar"
             android:layout_above="@id/relLayout3"
             app:layout_behavior="@string/appbar_scrolling_view_behavior"
             >
@@ -58,7 +58,7 @@
             android:layout_height="50dp"
             android:id="@+id/sendBtn"
             android:src="@drawable/ic_send_black_24dp"
-            android:layout_alignRight="@id/etChatInput"
+            android:layout_alignEnd="@id/etChatInput"
             android:background="@drawable/white_background"
             />
 
